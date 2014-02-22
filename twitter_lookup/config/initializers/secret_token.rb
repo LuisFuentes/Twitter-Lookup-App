@@ -9,4 +9,18 @@
 
 # Make sure your secret_key_base is kept private
 # if you're sharing your code publicly.
-TwitterLookup::Application.config.secret_key_base = 'a765894380afa6b21730070987185dd5993de83d83d23ac0f294108387110a4f34c10681c12dc70790227f6e1cb521a5acff4db9c8c6043b3285ba088726d277'
+require 'securerandom'
+
+def secure_token
+  token_file = Rails.root.join('.secret')
+  if File.exist?(token_file)
+    # Use the existing token.
+    File.read(token_file).chomp
+  else
+    # Generate a new token and store it in token_file.
+    token = SecureRandom.hex(64)
+    File.write(token_file, token)
+    token
+  end
+end
+TwitterLookup::Application.config.secret_key_base = secure_token
