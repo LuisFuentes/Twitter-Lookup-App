@@ -16,11 +16,19 @@ section {
 textarea {
   resize: vertical;
 }
-
+/***
 .center {
   text-align: center;
 }
+***/
 
-.center h1 {
+
+h1 {
   margin-bottom: 10px;
+  text-align: center;
 }
+h2{
+  font-size:20px;
+  text-align: center;
+}
+
