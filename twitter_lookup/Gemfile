@@ -32,4 +32,3 @@ group :production do
 end
 
 gem 'twitter', '>= 1.0'
-
