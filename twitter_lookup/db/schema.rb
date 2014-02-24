@@ -13,6 +13,11 @@
 
 ActiveRecord::Schema.define(version: 20140221213053) do
 
+  create_table "lookup_table", force: true do |t|
+    t.string "actress_name",        limit: 100
+    t.string "actress_twitter_url", limit: 100
+  end
+
   create_table "users", force: true do |t|
     t.string   "name"
     t.string   "email"
