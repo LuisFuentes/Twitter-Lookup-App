@@ -1,6 +1,8 @@
 TwitterLookup::Application.routes.draw do
   get "twitter_lookup_page/home"
-  post "twitter_lookup_page/search"
+  post "twitter_lookup_page/result"
+  get "twitter_lookup_page/result"
+  get "twitter_lookup_page/load_db"
   resources :users
 
   # The priority is based upon order of creation: first created -> highest priority.

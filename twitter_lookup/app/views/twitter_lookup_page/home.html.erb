@@ -3,7 +3,7 @@
     <h1>Twitter Search App</h1>
 
   <h2>This is the home page for the Twitter Actress Search Application.</h2>
-  <%= form_tag("/twitter_lookup_page/search", method: "post") do %> 
+  <%= form_tag("/twitter_lookup_page/result", method: "post") do %> 
       <%= label_tag 'Actress:' %>
       <%= text_field_tag "actress_name", 'Enter actress name...',
           :onclick => 'if($(this).val()=="Enter actress name..."){$(this).val("");};' %>

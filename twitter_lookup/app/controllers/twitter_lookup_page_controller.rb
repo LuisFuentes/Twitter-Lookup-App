@@ -15,7 +15,7 @@ class TwitterLookupPageController < ApplicationController
   def home
   end
 
-  def search
+  def load_db
       # Twitter configuration
       # TODO Hash these keys
       client = Twitter::REST::Client.new do |config|
@@ -39,31 +39,73 @@ class TwitterLookupPageController < ApplicationController
           # Search for accounts until twitter responses with
           # a 'TooManyRequests' exception then 15 minutes
           # Perform a user search on the name, limit to 10
-          begin
-              accounts = client.user_search(actress_name, :count=>10)
-          rescue Twitter::Error::TooManyRequests => error
-              puts "Waiting 15 minutes to access accounts from Twitter"
-              sleep(15*60)
-              retry
-          end
-          # Check if the query pulled results
-          if accounts
-              found = false
-              for account in accounts
-                  if not found and \
-                      account.verified and\
-                      account.name == actress_name
-                      # We found an account, save onto DB
-                      puts account.url
-                      Lookup_Table.create(\
-                            :actress_name => actress_name,\
-                            :actress_twitter_url => account.url.to_s())
+          if not Lookup_Table.find_by actress_name: actress_name
+              begin
+                  accounts = client.user_search(actress_name, :count=>10)
+              rescue Twitter::Error::TooManyRequests => error
+                  puts "Waiting 15 minutes to access accounts from Twitter"
+                  sleep(15*60)
+                  retry
+              end
+              # Check if the query pulled results
+              if accounts
+                  found = false
+                  for account in accounts
+                      # Check if matching name and verified
+                      if not found and \
+                          account.verified and\
+                          account.name == actress_name
+                          # We found an account, save onto DB
+                          puts "Found verified account: " + account.url
+                          Lookup_Table.create(\
+                                :actress_name => actress_name,\
+                                :actress_twitter_url => account.url.to_s())
+                          found = true
+                      # Else, Check if matching name and
+                      # has more than 10k followers
+                      elsif not found and \
+                          account.followers_count >= 10000 and \
+                          account.name == actress_name
+                          # We found an account, save onto DB
+                          puts "Found over 10k followers account: " + account.url
+                          Lookup_Table.create(\
+                                :actress_name => actress_name,\
+                                :actress_twitter_url => account.url.to_s())
+                          found = true
 
-                  end
+                      end
+                  end  
               end
           end
       end
       render "twitter_lookup_page/home"
   end
 
+  def result
+      # This helper function expects
+      # an actress name to be sent through
+      # the post request
+      
+      # Check if the user sent an input, just reload page.
+      actress_name = params[:actress_name]
+      if actress_name == "Enter actress name..." or \
+          actress_name == ""
+          render "twitter_lookup_page/home"
+          return
+      # Else, query for the actress name on the database
+      else
+          actress_details = Lookup_Table.find_by actress_name: actress_name
+          if actress_details
+              puts "Found '%s'" % actress_details.actress_name
+              puts "Found twitter URL: %s" % actress_details.actress_twitter_url
+              # Send the actress details to the result page
+              @actress_name = actress_details.actress_name
+              @actress_twitter_url = actress_details.actress_twitter_url
+              render "twitter_lookup_page/result"
+              return
+          end
+          puts "Did not find '%s'" % actress_name
+      end
+      render "twitter_lookup_page/home"
+  end
 end
