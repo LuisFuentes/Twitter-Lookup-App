@@ -2,7 +2,6 @@ require 'net/http'
 require 'open-uri'
 require 'nokogiri'
 require 'mysql2'
-
 class Lookup_Table < ActiveRecord::Base
     # Empty Class, represents model for
     # actress_lookup database,
@@ -16,6 +15,12 @@ class TwitterLookupPageController < ApplicationController
   end
 
   def load_db
+      # This function shall obtain the list
+      # of all famous american actresses and
+      # check if there exists a twitter account
+      # in their name. If so, store the twitter URL
+      # onto the database that can be queried.
+
       # Twitter configuration
       # TODO Hash these keys
       client = Twitter::REST::Client.new do |config|
@@ -24,7 +29,6 @@ class TwitterLookupPageController < ApplicationController
           config.access_token    = "27405615-bONkUcMgVTVt1co9Vodusp0M1KpFNHNfK0alWT99v"
           config.access_token_secret = "mlPgHrF2eeSsNODf5nbc0w6vtOQ7LbN3ni50sqZQEsqKS"
       end
-
       # Using Nokogiri as a web scraper, obtain the wiki page of
       # famous American actresses.
       page = Nokogiri::HTML(open(\
@@ -35,9 +39,9 @@ class TwitterLookupPageController < ApplicationController
       # For each actress, extract their name.
       for actress in all_actress
           actress_name = actress["title"]
-          puts actress_name
           # Search for accounts until twitter responses with
-          # a 'TooManyRequests' exception then 15 minutes
+          # a 'TooManyRequests' exception then wait 15 minutes
+          # in order to perform additional queries.
           # Perform a user search on the name, limit to 10
           if not Lookup_Table.find_by actress_name: actress_name
               begin
@@ -46,6 +50,10 @@ class TwitterLookupPageController < ApplicationController
                   puts "Waiting 15 minutes to access accounts from Twitter"
                   sleep(15*60)
                   retry
+              rescue Twitter::Error::ServiceUnavaiable => error
+                  puts "Waiting 5 minutes to access accounts from Twitter"
+                  sleep(5*60)
+                  retry
               end
               # Check if the query pulled results
               if accounts
@@ -53,26 +61,26 @@ class TwitterLookupPageController < ApplicationController
                   for account in accounts
                       # Check if matching name and verified
                       if not found and \
-                          account.verified and\
+                          account.verified and \
                           account.name == actress_name
                           # We found an account, save onto DB
                           puts "Found verified account: " + account.url
                           Lookup_Table.create(\
-                                :actress_name => actress_name,\
-                                :actress_twitter_url => account.url.to_s())
+                                              :actress_name => actress_name,\
+                                              :actress_twitter_url => account.url.to_s())
                           found = true
-                      # Else, Check if matching name and
-                      # has more than 10k followers
+                          # Else, Check if matching name and
+                          # has more than 10k followers
+
                       elsif not found and \
                           account.followers_count >= 10000 and \
                           account.name == actress_name
                           # We found an account, save onto DB
                           puts "Found over 10k followers account: " + account.url
                           Lookup_Table.create(\
-                                :actress_name => actress_name,\
-                                :actress_twitter_url => account.url.to_s())
+                                              :actress_name => actress_name,\
+                                              :actress_twitter_url => account.url.to_s())
                           found = true
-
                       end
                   end  
               end
@@ -86,10 +94,9 @@ class TwitterLookupPageController < ApplicationController
       # an actress name to be sent through
       # the post request
       
-      # Check if the user sent an input, just reload page.
+      # Check if the user didn't send an search input, then just reload page.
       actress_name = params[:actress_name]
-      if actress_name == "Enter actress name..." or \
-          actress_name == ""
+      if actress_name == "Enter actress name..." or actress_name == ""
           render "twitter_lookup_page/home"
           return
       # Else, query for the actress name on the database
@@ -104,8 +111,7 @@ class TwitterLookupPageController < ApplicationController
               render "twitter_lookup_page/result"
               return
           end
-          puts "Did not find '%s'" % actress_name
-      end
+      puts "Did not find '%s'" % actress_name
       render "twitter_lookup_page/home"
   end
 end
